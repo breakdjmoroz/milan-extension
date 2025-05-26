@@ -180,9 +180,18 @@ void Parser::factor()
     }
   }
 	else if(see(T_IDENTIFIER)) {
-		int varAddress = findOrAddVariable(scanner_->getStringValue());
+		int varAddress = findVariable(scanner_->getStringValue());
 		next();
-		codegen_->emit(LOAD, varAddress);
+
+    if (varAddress >= 0)
+    {
+      codegen_->emit(LOAD, varAddress);
+    }
+    else
+    {
+      reportError("only defined variable can be"
+          "used in expression.");
+    }
 		//Если встретили переменную, то выгружаем значение, лежащее по ее адресу, на вершину стека 
 	}
 	else if(see(T_ADDOP) && scanner_->getArithmeticValue() == A_MINUS) {
