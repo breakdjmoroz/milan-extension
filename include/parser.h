@@ -31,6 +31,17 @@ using namespace std;
  * ошибок без печати сообщений. Если в процессе разбора была найдена хотя бы
  * одна ошибка, код для виртуальной машины не печатается.*/
 
+enum VAR_TYPES: char
+{
+  INTEGER = 'i',
+  ADDRESS = 'a',
+};
+
+typedef struct {
+  int addr;
+  enum VAR_TYPES type;
+} VarValue;
+
 class Parser 
 {
 public:
@@ -56,7 +67,7 @@ public:
 	void parse();	//проводим синтаксический разбор 
 
 private:
-	typedef map<string, int> VarTable;
+	typedef map<string, VarValue> VarTable;
 	//описание блоков.
 	void program(); //Разбор программы. BEGIN statementList END
 	void statementList(); // Разбор списка операторов.

@@ -251,11 +251,11 @@ int Parser::findOrAddVariable(const string& var)
 {
 	VarTable::iterator it = variables_.find(var);
 	if(it == variables_.end()) {
-		variables_[var] = lastVar_;
+		variables_[var].addr = lastVar_;
 		return lastVar_++;
 	}
 	else {
-		return it->second;
+		return it->second.addr;
 	}
 }
 
@@ -264,7 +264,7 @@ int Parser::findVariable(const string& var)
   VarTable::iterator it = variables_.find(var);
 
 	if(it != variables_.end()) {
-    return it->second;
+    return it->second.addr;
 	}
   else {
     /* TODO: remove magic numbers */
