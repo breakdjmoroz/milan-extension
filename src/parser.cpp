@@ -155,7 +155,7 @@ void Parser::factor()
 {
 	/*
 		Множитель описывается следующими правилами:
-		<factor> -> number | identifier | -<factor> | (<expression>) | READ
+		<factor> -> number | &identifier | identifier | -<factor> | (<expression>) | READ
 	*/
 	if(see(T_NUMBER)) {
 		int value = scanner_->getIntValue();
@@ -163,6 +163,22 @@ void Parser::factor()
 		codegen_->emit(PUSH, value);
 		//Если встретили число, то преобразуем его в целое и записываем на вершину стека
 	}
+  else if (see(T_REF)) {
+    next();
+    mustBe(T_IDENTIFIER);
+    int varAddress = findVariable(scanner_->getStringValue());
+
+    // Если переменная определена, то достаём её адресс,
+    // иначе - синтаксическая ошибка
+    if (varAddress >= 0)
+    {
+      codegen_->emit(PUSH, varAddress);
+    }
+    else
+    {
+      reportError("only defined variable can be refered.");
+    }
+  }
 	else if(see(T_IDENTIFIER)) {
 		int varAddress = findOrAddVariable(scanner_->getStringValue());
 		next();
@@ -241,6 +257,19 @@ int Parser::findOrAddVariable(const string& var)
 	else {
 		return it->second;
 	}
+}
+
+int Parser::findVariable(const string& var)
+{
+  VarTable::iterator it = variables_.find(var);
+
+	if(it != variables_.end()) {
+    return it->second;
+	}
+  else {
+    /* TODO: remove magic numbers */
+    return -1;
+  }
 }
 
 void Parser::mustBe(Token t)

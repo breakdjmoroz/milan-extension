@@ -28,6 +28,7 @@ static const char * tokenNames_[] = {
 	"'('",
 	"')'",
 	"';'",
+  "'&'",
 };
 
 void Scanner::nextToken()
@@ -201,6 +202,22 @@ void Scanner::nextToken()
 				arithmeticValue_ = A_MULTIPLY;
 				nextChar();
 				break;
+
+      // Оператор взятия адреса. Следом за ним должен идти
+      // идентификатор - имя переменной, чей адресс берётся.
+      // Если идентификатора нет - ошибка.
+      case '&':
+        nextChar();
+        if (isIdentifierStart(ch_))
+        {
+          token_ = T_REF;
+        }
+        else
+        {
+          token_ = T_ILLEGAL;
+        }
+        break;
+
 			//Иначе лексема ошибки.
 			default:
 				token_ = T_ILLEGAL;
