@@ -29,6 +29,7 @@ static const char * tokenNames_[] = {
 	"')'",
 	"';'",
   "'&'",
+  "'*'",
 };
 
 void Scanner::nextToken()
@@ -198,9 +199,17 @@ void Scanner::nextToken()
 				break;
 
 			case '*':
-				token_ = T_MULOP;
-				arithmeticValue_ = A_MULTIPLY;
 				nextChar();
+				if (isIdentifierStart(ch_) ||
+						ch_ == '(')
+				{
+					token_ = T_UNREF;
+				}
+				else
+				{
+					token_ = T_MULOP;
+					arithmeticValue_ = A_MULTIPLY;
+				}
 				break;
 
       // Оператор взятия адреса. Следом за ним должен идти

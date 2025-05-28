@@ -43,11 +43,27 @@ void Parser::statement()
 	// Следующей лексемой должно быть присваивание. Затем идет блок expression, который возвращает значение на вершину стека.
 	// Записываем это значение по адресу нашей переменной
 	if(see(T_IDENTIFIER)) {
-		int varAddress = findOrAddVariable(scanner_->getStringValue());
+    string varName = scanner_->getStringValue();
+		int varAddress = findOrAddVariable(varName);
+
 		next();
 		mustBe(T_ASSIGN);
 		expression();
-		codegen_->emit(STORE, varAddress);
+
+    // Если переменная новая, то назначаем ей тип.
+    // В противном случае, проверяем тип текущего выражения.
+    // Если он соответствует типу переменной - выполняем
+    // присваивание. В противном случае - ошибка.
+    if (varAddress == lastVar_ - 1)
+    {
+      variables_[varName].type = lastExpressionType_;
+    }
+    else if (lastExpressionType_ != variables_[varName].type)
+    {
+      reportError("mismatch expression and variable types.");
+    }
+
+    codegen_->emit(STORE, varAddress);
 	}
 	// Если встретили IF, то затем должно следовать условие. На вершине стека лежит 1 или 0 в зависимости от выполнения условия.
 	// Затем зарезервируем место для условного перехода JUMP_NO к блоку ELSE (переход в случае ложного условия). Адрес перехода
@@ -98,6 +114,86 @@ void Parser::statement()
 		mustBe(T_RPAREN);
 		codegen_->emit(PRINT);
 	}
+  else if (match(T_UNREF)) {
+    // Если видем разыменование - значит хотим
+    // что-то положить по адресу. Следовательно,
+    // ожидаем определённую адресную переменную
+    // (идентификатор) и оператор присваивания с
+    // последующим выражением.
+    
+    if (see(T_IDENTIFIER))
+    {
+      mustBe(T_IDENTIFIER);
+      string varName = scanner_->getStringValue();
+      int varAddress = findVariable(varName);
+
+      // Если переменная определена и её тип - ADDRESS,
+      // то разыменовываем и делаем тип выражения
+      // целочисленным. Иначе - ошибка.
+      if (varAddress >= 0 &&
+          variables_[varName].type == ADDRESS) {
+
+        mustBe(T_ASSIGN);
+        expression();
+        
+        if (lastExpressionType_ == INTEGER)
+        {
+          // Нужно загрузить значение переменной
+          // адресного типа, а затем по этому
+          // значению положить значение в память
+          codegen_->emit(LOAD, varAddress);
+          codegen_->emit(BSTORE, 0);
+        }
+        else
+        {
+          reportError("mismatch expression and"
+              " variable types.");
+        }
+      }
+      else
+      {
+        reportError("only defined address"
+            " variable can be unrefered.");
+      }
+    }
+    else if (see(T_LPAREN))
+    {
+      codegen_->emit(LOAD, lastVar_ + 1);
+
+      mustBe(T_LPAREN);
+      expression();
+      mustBe(T_RPAREN);
+
+      codegen_->emit(STORE, lastVar_ + 1);
+
+      if (lastExpressionType_ != ADDRESS)
+      {
+        reportError("only expression with"
+            " address type can be unrefered.");
+      }
+
+      mustBe(T_ASSIGN);
+      expression();
+
+      if (lastExpressionType_ == INTEGER)
+        {
+          codegen_->emit(LOAD, lastVar_ + 1);
+          codegen_->emit(BSTORE, 0);
+          codegen_->emit(STORE, lastVar_ + 1);
+        }
+        else
+        {
+          reportError("mismatch expression and"
+              " variable types.");
+        }
+    }
+    else
+    {
+      reportError("only variable or (<expression>)"
+          " can be unrefered.");
+    }
+
+  }
 	else {
 		reportError("statement expected.");
 	}
@@ -113,6 +209,7 @@ void Parser::expression()
 		 терма, пока не встретим за термом символ, отличный от '+' и '-'
      */
 
+  lastExpressionType_ = INTEGER;
 	term();
 	while(see(T_ADDOP)) {
 		Arithmetic op = scanner_->getArithmeticValue();
@@ -155,7 +252,9 @@ void Parser::factor()
 {
 	/*
 		Множитель описывается следующими правилами:
-		<factor> -> number | &identifier | identifier | -<factor> | (<expression>) | READ
+		<factor> -> number | &identifier | *identifier |
+   *(<expression>) | identifier | -<factor> |
+   (<expression>) | READ
 	*/
 	if(see(T_NUMBER)) {
 		int value = scanner_->getIntValue();
@@ -172,6 +271,7 @@ void Parser::factor()
     // иначе - синтаксическая ошибка
     if (varAddress >= 0)
     {
+      lastExpressionType_ = ADDRESS;
       codegen_->emit(PUSH, varAddress);
     }
     else
@@ -179,12 +279,67 @@ void Parser::factor()
       reportError("only defined variable can be refered.");
     }
   }
+  else if (see(T_UNREF)) {
+    next();
+    if (see(T_IDENTIFIER))
+    {
+      mustBe(T_IDENTIFIER);
+      string varName = scanner_->getStringValue();
+      int varAddress = findVariable(varName);
+
+      // Если переменная определена и её тип - ADDRESS,
+      // то разыменовываем и делаем тип выражения
+      // целочисленным. Иначе - ошибка.
+      if (varAddress >= 0 &&
+          variables_[varName].type == ADDRESS) {
+        lastExpressionType_ = INTEGER;
+        codegen_->emit(LOAD, varAddress);
+        codegen_->emit(BLOAD, 0);
+      }
+      else
+      {
+        reportError("only defined address"
+            " variable can be unrefered.");
+      }
+    }
+    else if (see(T_LPAREN))
+    {
+      mustBe(T_LPAREN);
+      expression();
+      mustBe(T_RPAREN);
+
+      // Если тип выражения в скобках - ADDRESS,
+      // то разыменовываем его и делаем тип 
+      // глобального выражения
+      // целочисленным. Иначе - ошибка.
+      if (lastExpressionType_ == ADDRESS) {
+        lastExpressionType_ = INTEGER;
+        codegen_->emit(BLOAD, 0);
+      }
+      else
+      {
+        reportError("only expression with address"
+            " type can be unrefered.");
+      }
+    }
+    else
+    {
+      reportError("only variable or (<expression>)"
+          " can be unrefered.");
+    }
+  }
 	else if(see(T_IDENTIFIER)) {
-		int varAddress = findVariable(scanner_->getStringValue());
+    string varName = scanner_->getStringValue();
+		int varAddress = findVariable(varName);
 		next();
 
     if (varAddress >= 0)
     {
+      if (variables_[varName].type == ADDRESS)
+      {
+        lastExpressionType_ = ADDRESS;
+      }
+
       codegen_->emit(LOAD, varAddress);
     }
     else

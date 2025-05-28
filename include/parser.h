@@ -127,6 +127,7 @@ private:
 	bool recovered_; //не используется
 	VarTable variables_; //массив переменных, найденных в программе
 	int lastVar_; //номер последней записанной переменной
+  enum VAR_TYPES lastExpressionType_;
 };
 
 #endif
