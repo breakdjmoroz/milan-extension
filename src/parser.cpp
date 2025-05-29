@@ -158,12 +158,19 @@ void Parser::statement()
     }
     else if (see(T_LPAREN))
     {
+      // Используем свободную память, чтобы
+      // сохранить значение выражения. Перед
+      // этим сохраняем её значение
       codegen_->emit(LOAD, lastVar_ + 1);
 
       mustBe(T_LPAREN);
       expression();
       mustBe(T_RPAREN);
 
+      // Сохраняем значение выражения,
+      // выдающего адресс, по которому
+      // положим значение следующего за
+      // присваиванием выражения
       codegen_->emit(STORE, lastVar_ + 1);
 
       if (lastExpressionType_ != ADDRESS)
@@ -177,8 +184,14 @@ void Parser::statement()
 
       if (lastExpressionType_ == INTEGER)
         {
+          // Загружаем из памяти адресс,
+          // по которому положим значение
           codegen_->emit(LOAD, lastVar_ + 1);
           codegen_->emit(BSTORE, 0);
+
+          // Освобождаем занятую под значение
+          // выражения память. Загружаем
+          // запомненное в начале значение
           codegen_->emit(STORE, lastVar_ + 1);
         }
         else
