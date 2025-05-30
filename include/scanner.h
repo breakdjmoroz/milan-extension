@@ -34,6 +34,7 @@ enum Token {
   T_UNREF,          // "*" - символ разыменования ссылки
 	T_LSPAREN,		    // Открывающая скобка (квадратная)
 	T_RSPAREN,		    // Закрывающая скобка (квадратная)
+	T_FUNCTION,				// Ключевое слово "function"
 };
 
 // Функция tokenToString возвращает описание лексемы.
@@ -80,6 +81,7 @@ public:
 		keywords_["od"] = T_OD;
 		keywords_["write"] = T_WRITE;
 		keywords_["read"] = T_READ;
+		keywords_["function"] = T_FUNCTION;
 
 		nextChar();
 	}

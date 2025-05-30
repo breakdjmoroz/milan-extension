@@ -13,10 +13,25 @@ void Parser::parse()
 
 void Parser::program()
 {
+  // Резервируем место для команды
+  // перехода на точку входа.
+  codegen_->emit(NOP);
+
+	functions();
+
+  // Сохраняем адрес точки входа.
+  // Он идёт сразу за последней
+  // инструкцией последней функции.
+  int entry_point = codegen_->getCurrentAddress();
+
 	mustBe(T_BEGIN);
 	statementList();
 	mustBe(T_END);
 	codegen_->emit(STOP);
+
+  // Делаем переход на точку входа в
+  // программу.
+  codegen_->emitAt(0, JUMP, entry_point);
 }
 
 void Parser::statementList()
@@ -515,6 +530,18 @@ void Parser::relation()
 	else {
 		reportError("comparison operator expected.");
 	}
+}
+
+void Parser::functions()
+{
+  while (see(T_FUNCTION))
+  {
+    mustBe(T_FUNCTION);
+    mustBe(T_IDENTIFIER);
+    mustBe(T_BEGIN);
+    statementList();
+    mustBe(T_END);
+  }
 }
 
 int Parser::findOrAddVariable(const string& var)
