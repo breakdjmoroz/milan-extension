@@ -44,6 +44,8 @@ JUMP_NO         { return T_JUMP_NO;  }
 INPUT           { return T_INPUT;    }
 PRINT           { return T_PRINT;    }
 NOP             { return T_NOP;      }
+SLOAD           { return T_SLOAD;    }
+SSTORE          { return T_SSTORE;   }
 
 <<EOF>>         { yyterminate();     }
 

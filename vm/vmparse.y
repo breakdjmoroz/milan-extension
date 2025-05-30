@@ -32,6 +32,8 @@ void yyerror(char const *);
 %token T_INPUT
 %token T_PRINT
 %token T_COLON
+%token T_SLOAD
+%token T_SSTORE
 
 %%
 
@@ -60,6 +62,8 @@ line            : T_INT T_COLON T_NOP                    { put_command($1, NOP, 
                 | T_INT T_COLON T_INPUT                  { put_command($1, INPUT,    0);  }
                 | T_INT T_COLON T_PRINT                  { put_command($1, PRINT,    0);  }
                 | T_SET T_INT T_INT                      { set_mem($2, $3);               }
+                | T_INT T_COLON T_SLOAD     T_INT        { put_command($1, SLOAD,    $4); }
+                | T_INT T_COLON T_SSTORE    T_INT        { put_command($1, SSTORE,   $4); }
                 ;
 %%
 

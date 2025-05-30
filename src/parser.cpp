@@ -27,11 +27,13 @@ void Parser::program()
 	mustBe(T_BEGIN);
 	statementList();
 	mustBe(T_END);
+
 	codegen_->emit(STOP);
 
   // Делаем переход на точку входа в
   // программу.
   codegen_->emitAt(0, JUMP, entry_point);
+
 }
 
 void Parser::statementList()
@@ -536,12 +538,14 @@ void Parser::functions()
 {
   while (see(T_FUNCTION))
   {
+
     mustBe(T_FUNCTION);
     mustBe(T_IDENTIFIER);
     mustBe(T_BEGIN);
     statementList();
     mustBe(T_END);
   }
+
 }
 
 int Parser::findOrAddVariable(const string& var)

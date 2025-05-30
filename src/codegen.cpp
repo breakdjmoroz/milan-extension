@@ -83,6 +83,14 @@ void Command::print(int address, ostream& os)
 		case PRINT:
 			os << "PRINT";
 			break;
+
+		case SLOAD:
+			os << "SLOAD\t" << arg_;
+			break;
+
+		case SSTORE:
+			os << "SSTORE\t" << arg_;
+			break;
 	}
 
 	os << endl;

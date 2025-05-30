@@ -32,7 +32,9 @@ opcode_info opcodes_table[] = {
         {"JUMP_YES", 1},
         {"JUMP_NO",  1},
         {"INPUT",    0},
-        {"PRINT",    0}
+        {"PRINT",    0},
+        {"SLOAD",    1},
+        {"SSTORE",   1},
 };
 
 int opcodes_table_size = sizeof(opcodes_table) / sizeof(opcode_info);
@@ -45,7 +47,8 @@ typedef enum {
         STACK_EMPTY,
         DIVISION_BY_ZERO,
         BAD_INPUT,
-        UNKNOWN_COMMAND
+        UNKNOWN_COMMAND,
+        STACK_CORRUPTED,
 } runtime_error;
 
 void vm_init()
@@ -89,6 +92,10 @@ void vm_error(runtime_error error)
 
         case UNKNOWN_COMMAND:
                 fprintf(stderr, "Error: unknown command, unable to execute\n");
+                break;
+
+        case STACK_CORRUPTED:
+                fprintf(stderr, "Error: offset goes out of a stack boundaries\n");
                 break;
 
         default:
@@ -174,6 +181,29 @@ void vm_push(int word)
 	}
 	else {
 		vm_error(STACK_OVERFLOW);
+	}
+}
+
+int vm_sload(int offset)
+{
+	if(vm_stack_pointer + offset >= 0 &&
+			vm_stack_pointer + offset < MAX_STACK_SIZE) {
+		return vm_stack[vm_stack_pointer + offset];
+	}
+	else {
+		vm_error(STACK_CORRUPTED);
+		return 0;
+	}
+}
+
+void vm_sstore(int offset, int word)
+{
+	if(vm_stack_pointer + offset >= 0 &&
+			vm_stack_pointer + offset < MAX_STACK_SIZE) {
+		vm_stack[vm_stack_pointer + offset] = word;
+	}
+	else {
+		vm_error(STACK_CORRUPTED);
 	}
 }
 
@@ -330,6 +360,15 @@ int vm_run_command()
         case PRINT:
 		vm_write(vm_pop());
                 break;
+
+				case SLOAD:
+					vm_push(vm_sload(arg));
+					break;
+
+				case SSTORE:
+					int data = vm_pop();
+					vm_sstore(arg, data);
+					break;
 
         default:
 		vm_error(UNKNOWN_COMMAND);
