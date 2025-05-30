@@ -47,23 +47,91 @@ void Parser::statement()
 		int varAddress = findOrAddVariable(varName);
 
 		next();
-		mustBe(T_ASSIGN);
-		expression();
 
-    // Если переменная новая, то назначаем ей тип.
-    // В противном случае, проверяем тип текущего выражения.
-    // Если он соответствует типу переменной - выполняем
-    // присваивание. В противном случае - ошибка.
-    if (varAddress == lastVar_ - 1)
+    if (see(T_LSPAREN))
     {
-      variables_[varName].type = lastExpressionType_;
-    }
-    else if (lastExpressionType_ != variables_[varName].type)
-    {
-      reportError("mismatch expression and variable types.");
-    }
+      mustBe(T_LSPAREN);
 
-    codegen_->emit(STORE, varAddress);
+      // Добавим возможность объявления массивов.
+      // Для этого за идентификатором должно следовать
+      // числовое значение - размер массива, заключённое
+      // в квадратные скобки.
+      if (varAddress == lastVar_ - 1)
+      {
+        mustBe(T_NUMBER);
+        int index = scanner_->getIntValue();
+
+        mustBe(T_RSPAREN);
+
+        // Объявляем переменную, с которой
+        // ассоциирован массив перменной с
+        // адресным типом.
+        variables_[varName].type = ADDRESS;
+
+        // Задаём место для массива
+        lastVar_ = lastVar_ + index - 1;
+      }
+      // Здесь мы присваиваем значение элементу массива
+      // с определённым индексом.
+      else
+      {
+        // Сохраняем на стеке значение,
+        // лежащее в участке памяти,
+        // отведённом под временное хранеине
+        // значения выражения
+        codegen_->emit(LOAD, lastVar_ + 1);
+        expression();
+
+        mustBe(T_RSPAREN);
+
+        // Сохраняем вычисленный индекс во
+        // временную память
+        codegen_->emit(STORE, lastVar_ + 1);
+
+        if (lastExpressionType_ != INTEGER)
+        {
+          reportError("index can't be an address"
+              " variable.");
+        }
+
+        mustBe(T_ASSIGN);
+        expression();
+
+        // Загружаем из памяти значение
+        // индекса, складываем его с
+        // адресом начала массива и
+        // кладём туда значение выражения.
+
+        codegen_->emit(PUSH, varAddress);
+        codegen_->emit(LOAD, lastVar_ + 1);
+        codegen_->emit(ADD);
+        codegen_->emit(BSTORE, 0);
+        
+        // Восстанавливаем значение во
+        // временной ячейке памяти
+        codegen_->emit(STORE, lastVar_ + 1);
+      }
+    }
+    else
+    {
+      mustBe(T_ASSIGN);
+      expression();
+
+      // Если переменная новая, то назначаем ей тип.
+      // В противном случае, проверяем тип текущего выражения.
+      // Если он соответствует типу переменной - выполняем
+      // присваивание. В противном случае - ошибка.
+      if (varAddress == lastVar_ - 1)
+      {
+        variables_[varName].type = lastExpressionType_;
+      }
+      else if (lastExpressionType_ != variables_[varName].type)
+      {
+        reportError("mismatch expression and variable types.");
+      }
+
+      codegen_->emit(STORE, varAddress);
+    }
 	}
 	// Если встретили IF, то затем должно следовать условие. На вершине стека лежит 1 или 0 в зависимости от выполнения условия.
 	// Затем зарезервируем место для условного перехода JUMP_NO к блоку ELSE (переход в случае ложного условия). Адрес перехода
@@ -348,12 +416,37 @@ void Parser::factor()
 
     if (varAddress >= 0)
     {
-      if (variables_[varName].type == ADDRESS)
+      // Если обращение к элементу массива
+      // произошло в выражении - нужно
+      // достать значение из памяти по
+      // заданному индексу
+      if (see(T_LSPAREN))
       {
-        lastExpressionType_ = ADDRESS;
-      }
+        next();
 
-      codegen_->emit(LOAD, varAddress);
+        // Получаем индекс
+        expression();
+
+        if (lastExpressionType_ != INTEGER)
+        {
+          reportError("index can't be an address"
+              " variable.");
+        }
+
+        mustBe(T_RSPAREN);
+
+        // Загружаем значение из памяти
+        codegen_->emit(BLOAD, varAddress);
+      }
+      else
+      {
+        if (variables_[varName].type == ADDRESS)
+        {
+          lastExpressionType_ = ADDRESS;
+        }
+
+        codegen_->emit(LOAD, varAddress);
+      }
     }
     else
     {

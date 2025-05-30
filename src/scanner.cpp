@@ -30,6 +30,8 @@ static const char * tokenNames_[] = {
 	"';'",
   "'&'",
   "'*'",
+  "'['",
+  "']'",
 };
 
 void Scanner::nextToken()
@@ -226,6 +228,18 @@ void Scanner::nextToken()
           token_ = T_ILLEGAL;
         }
         break;
+			// Встретили открывающую квадратную
+			// скобку
+			case '[':
+				token_ = T_LSPAREN;
+				nextChar();
+				break;
+			// Встретили закрывающую квадратную
+			// скобку
+			case ']':
+				token_ = T_RSPAREN;
+				nextChar();
+				break;
 
 			//Иначе лексема ошибки.
 			default:
