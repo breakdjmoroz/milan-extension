@@ -7,6 +7,7 @@
 #include <sstream>
 #include <string>
 #include <map>
+#include <vector>
 
 using namespace std;
 
@@ -73,7 +74,7 @@ private:
   typedef struct {
     int addr;
     int lastVar;
-    int n_params;
+    vector<VAR_TYPES> params_types;
     VarTable variables;
   } FunctionInfo;
 
@@ -88,8 +89,8 @@ private:
 	void factor(); //разбор множителя.
 	void relation(); //разбор условия.
 	void functions(); // Разбор списка функций.
-	int parameters(); // Разбор списка параметров.
-	int arguments(); // Разбор списка аргументов.
+	void parameters(); // Разбор списка параметров.
+	void arguments(); // Разбор списка аргументов.
 
 	// Сравнение текущей лексемы с образцом. Текущая позиция в потоке лексем не изменяется.
 	bool see(Token t)
@@ -133,7 +134,7 @@ private:
 	//Если находит нужную переменную - возвращает ее номер, иначе добавляет ее в массив, увеличивает lastVar и возвращает его.
 	int findVariable(const string&); //функция пробегает по variables_. 
   int addFunction(const string& fn_name,
-    const int addr, const int n_params, 
+    const int addr, const vector<VAR_TYPES> params_types,
     const int lastVar, const VarTable variables);
 
 	int findFunciton(const string&); //функция пробегает по functions_. 
@@ -149,6 +150,8 @@ private:
   enum VAR_TYPES lastExpressionType_;
   FuncTable functions_;
   bool in_function;
+
+  vector<VAR_TYPES> lastParamsTypes_;
 };
 
 #endif

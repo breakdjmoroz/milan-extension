@@ -582,24 +582,23 @@ void Parser::factor()
         }
 
         codegen_->emit(PUSH, 0);
-        int n_args = arguments();
 
-        if (n_args == functions_[varName].n_params)
-        {
-          mustBe(T_RPAREN);
+        lastParamsTypes_ = functions_[varName].params_types;
+        int n_args = lastParamsTypes_.size();
 
-          codegen_->emit(BP);
+        arguments();
 
-          int offset = codegen_->getCurrentAddress() + 4;
-          codegen_->emit(PUSH, offset);
-          codegen_->emit(SSTORE, -n_args - 1);
-          codegen_->emit(BP, -n_args);
-          codegen_->emit(JUMP, functions_[varName].addr);
-        }
-        else
-        {
-          reportError("number of arguments is incorrect.");
-        }
+        lastParamsTypes_.clear();
+
+        mustBe(T_RPAREN);
+
+        codegen_->emit(BP);
+
+        int offset = codegen_->getCurrentAddress() + 4;
+        codegen_->emit(PUSH, offset);
+        codegen_->emit(SSTORE, -n_args - 1);
+        codegen_->emit(BP, -n_args);
+        codegen_->emit(JUMP, functions_[varName].addr);
       }
       else
       {
@@ -677,55 +676,64 @@ void Parser::relation()
 	}
 }
 
-int Parser::arguments()
+void Parser::arguments()
 {
-  int count = 0;
+  int index = 0;
+  int n_params = lastParamsTypes_.size();
 
   if (!see(T_RPAREN))
   {
     expression();
-    ++count;
+
+    if (lastExpressionType_ !=
+        lastParamsTypes_[index++])
+    {
+      reportError("mismatch parameter's and"
+          " argument's types.");
+    }
   }
 
   while (!see(T_RPAREN))
   {
     mustBe(T_COMMA);
     expression();
-    ++count;
+
+    if (lastExpressionType_ !=
+        lastParamsTypes_[index++])
+    {
+      reportError("mismatch parameter's and"
+          " argument's types.");
+    }
   }
 
-  return count;
+  if (index != n_params)
+  {
+    reportError("wrong amount of arguments.");
+  }
 }
 
-int Parser::parameters()
+void Parser::parameters()
 {
-  int count = 0;
 
-  if (see(T_IDENTIFIER))
+  bool is_reference = false;
+
+  if (see(T_REF))
   {
-    mustBe(T_IDENTIFIER);
-
-    string varName = scanner_->getStringValue();
-    findOrAddVariable(varName);
-    variables_[varName].type = INTEGER;
-
-    ++count;
+    next();
+    is_reference = true;
   }
-  else if (see(T_REF))
-  {
-    mustBe(T_REF);
-    mustBe(T_IDENTIFIER);
+  mustBe(T_IDENTIFIER);
 
-    string varName = scanner_->getStringValue();
-    findOrAddVariable(varName);
-    variables_[varName].type = ADDRESS;
+  string varName = scanner_->getStringValue();
+  findOrAddVariable(varName);
+  VAR_TYPES type = (is_reference)? ADDRESS : INTEGER;
+  variables_[varName].type = type;
 
-    ++count;
-  }
+  lastParamsTypes_.push_back(type);
 
   while(!see(T_RPAREN))
   {
-    bool is_reference = false;
+    is_reference = false;
     mustBe(T_COMMA);
 
     if (see(T_REF))
@@ -735,15 +743,13 @@ int Parser::parameters()
     }
     mustBe(T_IDENTIFIER);
 
-    string varName = scanner_->getStringValue();
+    varName = scanner_->getStringValue();
     findOrAddVariable(varName);
-    variables_[varName].type =
-      (is_reference)? ADDRESS : INTEGER;
+    VAR_TYPES type = (is_reference)? ADDRESS : INTEGER;
+    variables_[varName].type = type;
 
-    ++count;
+    lastParamsTypes_.push_back(type);
   }
-
-  return count;
 }
 
 void Parser::functions()
@@ -766,8 +772,11 @@ void Parser::functions()
     lastVar_ = lastVar;
 
     mustBe(T_LPAREN);
-    int n_params = parameters();
+    parameters();
     mustBe(T_RPAREN);
+
+    vector<VAR_TYPES> params_types = lastParamsTypes_;
+    lastParamsTypes_.clear();
 
     int addr = codegen_->getCurrentAddress();
 
@@ -775,7 +784,7 @@ void Parser::functions()
     statementList();
     mustBe(T_END);
 
-    for (int i = 0; i < n_params; ++i)
+    for (int i = 0; i < params_types.size(); ++i)
     {
       codegen_->emit(POP);
     }
@@ -784,8 +793,8 @@ void Parser::functions()
     variables = variables_;
     lastVar = lastVar_;
 
-    addFunction(fn_name, addr, n_params,
-        lastVar, variables);
+    addFunction(fn_name, addr,
+        params_types, lastVar, variables);
 
     variables_ = variables_global;
     lastVar_ = lastVar_global;
@@ -820,13 +829,13 @@ int Parser::findVariable(const string& var)
 }
 
 int Parser::addFunction(const string& fn_name,
-    const int addr, const int n_params, 
+    const int addr, const vector<VAR_TYPES> params_types,
     const int lastVar, const VarTable variables)
 {
 	FuncTable::iterator it = functions_.find(fn_name);
 	if(it == functions_.end()) {
 		functions_[fn_name].addr = addr;
-		functions_[fn_name].n_params = n_params;
+		functions_[fn_name].params_types = params_types;
 		functions_[fn_name].lastVar = lastVar;
 		functions_[fn_name].variables = variables;
 		return functions_[fn_name].addr;
