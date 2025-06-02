@@ -10,6 +10,7 @@ int vm_memory[MAX_MEMORY_SIZE];
 int vm_stack[MAX_STACK_SIZE];
 
 unsigned int vm_stack_pointer = 0;
+unsigned int vm_base_pointer = 0;
 unsigned int vm_command_pointer = 0;
 
 opcode_info opcodes_table[] = {
@@ -36,6 +37,7 @@ opcode_info opcodes_table[] = {
         {"SLOAD",    1},
         {"SSTORE",   1},
         {"SJUMP",    0},
+        {"BP",		   1},
 };
 
 int opcodes_table_size = sizeof(opcodes_table) / sizeof(opcode_info);
@@ -187,9 +189,9 @@ void vm_push(int word)
 
 int vm_sload(int offset)
 {
-	if(vm_stack_pointer + offset >= 0 &&
-			vm_stack_pointer + offset < MAX_STACK_SIZE) {
-		return vm_stack[vm_stack_pointer + offset];
+	if(vm_base_pointer + offset >= 0 &&
+			vm_base_pointer + offset < MAX_STACK_SIZE) {
+		return vm_stack[vm_base_pointer + offset];
 	}
 	else {
 		vm_error(STACK_CORRUPTED);
@@ -199,9 +201,9 @@ int vm_sload(int offset)
 
 void vm_sstore(int offset, int word)
 {
-	if(vm_stack_pointer + offset >= 0 &&
-			vm_stack_pointer + offset < MAX_STACK_SIZE) {
-		vm_stack[vm_stack_pointer + offset] = word;
+	if(vm_base_pointer + offset >= 0 &&
+			vm_base_pointer + offset < MAX_STACK_SIZE) {
+		vm_stack[vm_base_pointer + offset] = word;
 	}
 	else {
 		vm_error(STACK_CORRUPTED);
@@ -381,6 +383,9 @@ int vm_run_command()
 					}
 					break;
 
+				case BP:
+					vm_base_pointer = vm_stack_pointer + arg;
+					break;
 
         default:
 		vm_error(UNKNOWN_COMMAND);

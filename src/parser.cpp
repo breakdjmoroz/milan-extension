@@ -587,15 +587,13 @@ void Parser::factor()
         if (n_args == functions_[varName].n_params)
         {
           mustBe(T_RPAREN);
-          int offset = codegen_->getCurrentAddress() + n_args + 4;
 
+          codegen_->emit(BP);
+
+          int offset = codegen_->getCurrentAddress() + 4;
           codegen_->emit(PUSH, offset);
           codegen_->emit(SSTORE, -n_args - 1);
-          for (int i = 0; i < n_args; ++i)
-          {
-            codegen_->emit(POP);
-          }
-
+          codegen_->emit(BP, -n_args);
           codegen_->emit(JUMP, functions_[varName].addr);
         }
         else
@@ -750,6 +748,10 @@ void Parser::functions()
     statementList();
     mustBe(T_END);
 
+    for (int i = 0; i < n_params; ++i)
+    {
+      codegen_->emit(POP);
+    }
     codegen_->emit(SJUMP);
 
     variables = variables_;

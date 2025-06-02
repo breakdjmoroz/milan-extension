@@ -47,6 +47,7 @@ NOP             { return T_NOP;      }
 SLOAD           { return T_SLOAD;    }
 SSTORE          { return T_SSTORE;   }
 SJUMP	          { return T_SJUMP;	   }
+BP		          { return T_BP;	 	   }
 
 <<EOF>>         { yyterminate();     }
 

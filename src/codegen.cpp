@@ -95,6 +95,10 @@ void Command::print(int address, ostream& os)
 		case SJUMP:
 			os << "SJUMP";
 			break;
+
+		case BP:
+			os << "BP\t" << arg_;
+			break;
 	}
 
 	os << endl;
