@@ -99,6 +99,15 @@ void Command::print(int address, ostream& os)
 		case BP:
 			os << "BP\t" << arg_;
 			break;
+
+		case SBLOAD:
+			os << "SBLOAD\t" << arg_;
+			break;
+
+		case SBSTORE:
+			os << "SBSTORE\t" << arg_;
+			break;
+
 	}
 
 	os << endl;

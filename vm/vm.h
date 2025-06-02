@@ -40,6 +40,8 @@ typedef enum {
 				SSTORE,
 				SJUMP,
 				BP,
+				SBLOAD,
+				SBSTORE,
 } operation;
 
 /* Операции сравнения */

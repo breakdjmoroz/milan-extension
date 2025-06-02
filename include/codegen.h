@@ -34,6 +34,8 @@ enum Instruction
 	SSTORE,		// SSTORE offset - загрузка значения на стек по адресу: sp + offset. Значение берётся из вершины стека.
 	SJUMP,
 	BP,
+	SBLOAD,
+	SBSTORE,
 };
 
 // Класс Command представляет машинные инструкции. 

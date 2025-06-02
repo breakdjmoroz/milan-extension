@@ -38,6 +38,8 @@ opcode_info opcodes_table[] = {
         {"SSTORE",   1},
         {"SJUMP",    0},
         {"BP",		   1},
+        {"SBLOAD",   1},
+        {"SBSTORE",  1},
 };
 
 int opcodes_table_size = sizeof(opcodes_table) / sizeof(opcode_info);
@@ -57,6 +59,7 @@ typedef enum {
 void vm_init()
 {
 	vm_stack_pointer = 0;
+	vm_base_pointer = 0;
 	vm_command_pointer = 0;
 }
 
@@ -369,8 +372,7 @@ int vm_run_command()
 					break;
 
 				case SSTORE:
-					int data = vm_pop();
-					vm_sstore(arg, data);
+					vm_sstore(arg, vm_pop());
 					break;
 
         case SJUMP:
@@ -385,6 +387,15 @@ int vm_run_command()
 
 				case BP:
 					vm_base_pointer = vm_stack_pointer + arg;
+					break;
+
+				case SBLOAD:
+					vm_push(vm_sload(arg + vm_pop()));
+					break;
+
+				case SBSTORE:
+					int offset = vm_pop();
+					vm_sstore(arg + offset, vm_pop());
 					break;
 
         default:

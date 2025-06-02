@@ -36,6 +36,8 @@ void yyerror(char const *);
 %token T_SSTORE
 %token T_SJUMP
 %token T_BP
+%token T_SBLOAD
+%token T_SBSTORE
 
 %%
 
@@ -68,6 +70,8 @@ line            : T_INT T_COLON T_NOP                    { put_command($1, NOP, 
                 | T_INT T_COLON T_SSTORE    T_INT        { put_command($1, SSTORE,   $4); }
                 | T_INT T_COLON T_SJUMP                  { put_command($1, SJUMP,		 0); }
                 | T_INT T_COLON T_BP        T_INT        { put_command($1, BP,   		 $4); }
+                | T_INT T_COLON T_SBLOAD    T_INT        { put_command($1, SBLOAD,    $4); }
+                | T_INT T_COLON T_SBSTORE   T_INT        { put_command($1, SBSTORE,   $4); }
                 ;
 %%
 

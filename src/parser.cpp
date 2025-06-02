@@ -139,7 +139,7 @@ void Parser::statement()
         {
           codegen_->emit(SLOAD, lastVar_ + 1);
           codegen_->emit(ADD);
-          // TODO: SBSTORE
+          codegen_->emit(SBSTORE, 0);
 
           // Восстанавливаем значение во
           // временной ячейке памяти
@@ -294,7 +294,7 @@ void Parser::statement()
           if (in_function)
           {
             codegen_->emit(SLOAD, varAddress);
-            // TODO: SBSTORE
+            codegen_->emit(SBSTORE, 0);
           }
           else
           {
@@ -361,7 +361,7 @@ void Parser::statement()
           if (in_function)
           {
             codegen_->emit(SLOAD, lastVar_ + 1);
-            // TODO: SBSTORE
+            codegen_->emit(SBSTORE, 0);
 
             codegen_->emit(SSTORE, lastVar_ + 1);
           }
@@ -492,7 +492,7 @@ void Parser::factor()
         if (in_function)
         {
           codegen_->emit(SLOAD, varAddress);
-          // TODO: SBLOAD
+          codegen_->emit(SBLOAD, 0);
         }
         else
         {
@@ -521,7 +521,7 @@ void Parser::factor()
 
         if (in_function)
         {
-          //TODO: SBLOAD
+          codegen_->emit(SBLOAD, 0);
         }
         else
         {
@@ -571,7 +571,7 @@ void Parser::factor()
         // Загружаем значение из памяти
         if (in_function)
         {
-          // TODO: SBLOAD / SBSTORE
+          codegen_->emit(SBLOAD, varAddress);
         }
         else
         {

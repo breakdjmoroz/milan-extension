@@ -48,6 +48,8 @@ SLOAD           { return T_SLOAD;    }
 SSTORE          { return T_SSTORE;   }
 SJUMP	          { return T_SJUMP;	   }
 BP		          { return T_BP;	 	   }
+SBLOAD          { return T_SBLOAD;   }
+SBSTORE         { return T_SBSTORE;  }
 
 <<EOF>>         { yyterminate();     }
 
