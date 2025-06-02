@@ -69,12 +69,17 @@ private:
     enum VAR_TYPES type;
   } VarValue;
 
+  typedef struct {
+    string name;
+    enum VAR_TYPES type;
+  } Parameter;
+
 	typedef map<string, VarValue> VarTable;
 
   typedef struct {
     int addr;
     int lastVar;
-    vector<VAR_TYPES> params_types;
+    vector<Parameter> params_types;
     VarTable variables;
   } FunctionInfo;
 
@@ -134,11 +139,13 @@ private:
 	//Если находит нужную переменную - возвращает ее номер, иначе добавляет ее в массив, увеличивает lastVar и возвращает его.
 	int findVariable(const string&); //функция пробегает по variables_. 
   int addFunction(const string& fn_name,
-    const int addr, const vector<VAR_TYPES> params_types,
+    const int addr, const vector<Parameter> params_types,
     const int lastVar, const VarTable variables);
 
 	int findFunciton(const string&); //функция пробегает по functions_. 
 	//Если находит нужную функцию - возвращает ее номер, иначе - ошибка.
+
+	bool findParam(const string&);
 
 	Scanner* scanner_; //лексический анализатор для конструктора
 	CodeGen* codegen_; //указатель на виртуальную машину
@@ -151,7 +158,7 @@ private:
   FuncTable functions_;
   bool in_function;
 
-  vector<VAR_TYPES> lastParamsTypes_;
+  vector<Parameter> lastParamsTypes_;
 };
 
 #endif

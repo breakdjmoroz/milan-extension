@@ -1,5 +1,6 @@
 #include "parser.h"
 #include <sstream>
+#include <algorithm>
 
 //Выполняем синтаксический разбор блока program. Если во время разбора не обнаруживаем 
 //никаких ошибок, то выводим последовательность команд стек-машины
@@ -71,7 +72,7 @@ void Parser::statement()
       if (in_function)
       {
         // Резервируем место на стеке под переменную
-        codegen_->emit(PUSH, 100);
+        codegen_->emit(PUSH, 0);
       }
 
     }
@@ -289,6 +290,11 @@ void Parser::statement()
       mustBe(T_IDENTIFIER);
       string varName = scanner_->getStringValue();
       int varAddress = findVariable(varName);
+      bool is_local_variable = false;
+      if (in_function)
+      {
+        is_local_variable = findParam(varName);
+      }
 
       // Если переменная определена и её тип - ADDRESS,
       // то разыменовываем и делаем тип выражения
@@ -307,7 +313,14 @@ void Parser::statement()
           if (in_function)
           {
             codegen_->emit(SLOAD, varAddress);
-            codegen_->emit(SBSTORE, 0);
+            if (is_local_variable)
+            {
+              codegen_->emit(SBSTORE, 0);
+            }
+            else
+            {
+              codegen_->emit(BSTORE, 0);
+            }
           }
           else
           {
@@ -494,6 +507,11 @@ void Parser::factor()
       mustBe(T_IDENTIFIER);
       string varName = scanner_->getStringValue();
       int varAddress = findVariable(varName);
+      bool is_local_variable = false;
+      if (in_function)
+      {
+        is_local_variable = findParam(varName);
+      }
 
       // Если переменная определена и её тип - ADDRESS,
       // то разыменовываем и делаем тип выражения
@@ -505,7 +523,14 @@ void Parser::factor()
         if (in_function)
         {
           codegen_->emit(SLOAD, varAddress);
-          codegen_->emit(SBLOAD, 0);
+          if (is_local_variable)
+          {
+            codegen_->emit(SBLOAD, 0);
+          }
+          else
+          {
+            codegen_->emit(BLOAD, 0);
+          }
         }
         else
         {
@@ -557,7 +582,13 @@ void Parser::factor()
     string varName = scanner_->getStringValue();
 		int varAddress = findVariable(varName);
     int fn_address = findFunciton(varName);
+    bool is_local_variable = false;
+    if (in_function)
+    {
+      is_local_variable = findParam(varName);
+    }
     bool is_function = false;
+
 		next();
 
     if (varAddress >= 0)
@@ -582,7 +613,7 @@ void Parser::factor()
         mustBe(T_RSPAREN);
 
         // Загружаем значение из памяти
-        if (in_function)
+        if (in_function && is_local_variable)
         {
           codegen_->emit(SBLOAD, varAddress);
         }
@@ -728,7 +759,7 @@ void Parser::arguments()
     expression();
 
     if (lastExpressionType_ !=
-        lastParamsTypes_[index++])
+        lastParamsTypes_[index++].type)
     {
       reportError("mismatch parameter's and"
           " argument's types.");
@@ -741,7 +772,7 @@ void Parser::arguments()
     expression();
 
     if (lastExpressionType_ !=
-        lastParamsTypes_[index++])
+        lastParamsTypes_[index++].type)
     {
       reportError("mismatch parameter's and"
           " argument's types.");
@@ -756,6 +787,7 @@ void Parser::arguments()
 
 void Parser::parameters()
 {
+  Parameter param = {};
 
   bool is_reference = false;
 
@@ -771,7 +803,8 @@ void Parser::parameters()
   VAR_TYPES type = (is_reference)? ADDRESS : INTEGER;
   variables_[varName].type = type;
 
-  lastParamsTypes_.push_back(type);
+  param = {varName, type};
+  lastParamsTypes_.push_back(param);
 
   while(!see(T_RPAREN))
   {
@@ -790,7 +823,8 @@ void Parser::parameters()
     VAR_TYPES type = (is_reference)? ADDRESS : INTEGER;
     variables_[varName].type = type;
 
-    lastParamsTypes_.push_back(type);
+    param = {varName, type};
+    lastParamsTypes_.push_back(param);
   }
 }
 
@@ -817,8 +851,7 @@ void Parser::functions()
     parameters();
     mustBe(T_RPAREN);
 
-    vector<VAR_TYPES> params_types = lastParamsTypes_;
-    lastParamsTypes_.clear();
+    vector<Parameter> params_types = lastParamsTypes_;
 
     int addr = codegen_->getCurrentAddress();
 
@@ -826,6 +859,7 @@ void Parser::functions()
     statementList();
     mustBe(T_END);
 
+    lastParamsTypes_.clear();
     variables = variables_;
     lastVar = lastVar_;
 
@@ -871,7 +905,7 @@ int Parser::findVariable(const string& var)
 }
 
 int Parser::addFunction(const string& fn_name,
-    const int addr, const vector<VAR_TYPES> params_types,
+    const int addr, const vector<Parameter> params_types,
     const int lastVar, const VarTable variables)
 {
 	FuncTable::iterator it = functions_.find(fn_name);
@@ -898,6 +932,13 @@ int Parser::findFunciton(const string& func)
     /* TODO: remove magic numbers */
     return -1;
   }
+}
+
+bool Parser::findParam(const string& param)
+{
+  return none_of(lastParamsTypes_.cbegin(),
+      lastParamsTypes_.cend(),
+      [param](Parameter p){return p.name == param;});
 }
 
 void Parser::mustBe(Token t)
