@@ -158,6 +158,35 @@ void Parser::statement()
         
       }
     }
+    else if (see(T_LPAREN))
+    {
+      mustBe(T_LPAREN);
+
+      int fn_address = findFunciton(varName);
+
+      if (fn_address >= 0)
+      {
+        codegen_->emit(PUSH, 0);
+
+        lastParamsTypes_ = functions_[varName].params_types;
+        int n_args = lastParamsTypes_.size();
+
+        arguments();
+
+        lastParamsTypes_.clear();
+
+        mustBe(T_RPAREN);
+
+        codegen_->emit(BP);
+
+        int offset = codegen_->getCurrentAddress() + 4;
+        codegen_->emit(PUSH, offset);
+        codegen_->emit(SSTORE, -n_args - 1);
+        codegen_->emit(BP, -n_args);
+        codegen_->emit(JUMP, functions_[varName].addr);
+      }
+
+    }
     else
     {
       mustBe(T_ASSIGN);
