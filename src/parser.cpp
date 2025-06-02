@@ -61,7 +61,20 @@ void Parser::statement()
 	// Записываем это значение по адресу нашей переменной
 	if(see(T_IDENTIFIER)) {
     string varName = scanner_->getStringValue();
-		int varAddress = findOrAddVariable(varName);
+    bool new_var = false;
+		int varAddress = findVariable(varName);
+    if (varAddress < 0)
+    {
+      new_var = true;
+      varAddress = findOrAddVariable(varName);
+
+      if (in_function)
+      {
+        // Резервируем место на стеке под переменную
+        codegen_->emit(PUSH, 100);
+      }
+
+    }
 
 		next();
 
@@ -73,7 +86,7 @@ void Parser::statement()
       // Для этого за идентификатором должно следовать
       // числовое значение - размер массива, заключённое
       // в квадратные скобки.
-      if (varAddress == lastVar_ - 1)
+      if (new_var)
       {
         mustBe(T_NUMBER);
         int index = scanner_->getIntValue();
@@ -87,6 +100,14 @@ void Parser::statement()
 
         // Задаём место для массива
         lastVar_ = lastVar_ + index - 1;
+
+        if (in_function)
+        {
+          for (int i = 0; i < index - 1; ++i)
+          {
+            codegen_->emit(PUSH, 100);
+          }
+        }
       }
       // Здесь мы присваиваем значение элементу массива
       // с определённым индексом.
@@ -96,11 +117,7 @@ void Parser::statement()
         // лежащее в участке памяти,
         // отведённом под временное хранеине
         // значения выражения
-        if (in_function)
-        {
-          codegen_->emit(SLOAD, lastVar_ + 1);
-        }
-        else
+        if (!in_function)
         {
           codegen_->emit(LOAD, lastVar_ + 1);
         }
@@ -110,11 +127,7 @@ void Parser::statement()
 
         // Сохраняем вычисленный индекс во
         // временную память
-        if (in_function)
-        {
-          codegen_->emit(SSTORE, lastVar_ + 1);
-        }
-        else
+        if (!in_function)
         {
           codegen_->emit(STORE, lastVar_ + 1);
         }
@@ -137,13 +150,12 @@ void Parser::statement()
 
         if (in_function)
         {
-          codegen_->emit(SLOAD, lastVar_ + 1);
+          codegen_->emit(SLOAD, lastVar_);
           codegen_->emit(ADD);
           codegen_->emit(SBSTORE, 0);
 
-          // Восстанавливаем значение во
-          // временной ячейке памяти
-          codegen_->emit(SSTORE, lastVar_ + 1);
+          codegen_->emit(POP);
+
         }
         else
         {
@@ -190,13 +202,14 @@ void Parser::statement()
     else
     {
       mustBe(T_ASSIGN);
+
       expression();
 
       // Если переменная новая, то назначаем ей тип.
       // В противном случае, проверяем тип текущего выражения.
       // Если он соответствует типу переменной - выполняем
       // присваивание. В противном случае - ошибка.
-      if (varAddress == lastVar_ - 1)
+      if (new_var)
       {
         variables_[varName].type = lastExpressionType_;
       }
@@ -813,17 +826,17 @@ void Parser::functions()
     statementList();
     mustBe(T_END);
 
-    for (int i = 0; i < params_types.size(); ++i)
-    {
-      codegen_->emit(POP);
-    }
-    codegen_->emit(SJUMP);
-
     variables = variables_;
     lastVar = lastVar_;
 
     addFunction(fn_name, addr,
         params_types, lastVar, variables);
+
+    for (int i = 0; i < lastVar; ++i)
+    {
+      codegen_->emit(POP);
+    }
+    codegen_->emit(SJUMP);
 
     variables_ = variables_global;
     lastVar_ = lastVar_global;
