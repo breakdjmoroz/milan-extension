@@ -64,6 +64,7 @@ void Parser::statement()
     string varName = scanner_->getStringValue();
     bool new_var = false;
 		int varAddress = findVariable(varName);
+    bool is_local_variable = false;
     if (varAddress < 0)
     {
       new_var = true;
@@ -71,6 +72,7 @@ void Parser::statement()
 
       if (in_function)
       {
+        is_local_variable = findParam(varName);
         // Резервируем место на стеке под переменную
         codegen_->emit(PUSH, 0);
       }
@@ -147,13 +149,28 @@ void Parser::statement()
         // адресом начала массива и
         // кладём туда значение выражения.
 
-        codegen_->emit(PUSH, varAddress);
+        if (!is_local_variable &&
+            in_function)
+        {
+          codegen_->emit(SLOAD, varAddress);
+        }
+        else
+        {
+          codegen_->emit(PUSH, varAddress);
+        }
 
         if (in_function)
         {
           codegen_->emit(SLOAD, lastVar_);
           codegen_->emit(ADD);
-          codegen_->emit(SBSTORE, 0);
+          if (is_local_variable)
+          {
+            codegen_->emit(SBSTORE, 0);
+          }
+          else
+          {
+            codegen_->emit(BSTORE, 0);
+          }
 
           codegen_->emit(POP);
 
@@ -613,9 +630,18 @@ void Parser::factor()
         mustBe(T_RSPAREN);
 
         // Загружаем значение из памяти
-        if (in_function && is_local_variable)
+        if (in_function)
         {
-          codegen_->emit(SBLOAD, varAddress);
+          if (is_local_variable)
+          {
+            codegen_->emit(SBLOAD, varAddress);
+          }
+          else
+          {
+            codegen_->emit(SLOAD, varAddress);
+            codegen_->emit(ADD);
+            codegen_->emit(BLOAD, 0);
+          }
         }
         else
         {
