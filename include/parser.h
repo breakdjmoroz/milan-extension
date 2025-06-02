@@ -31,17 +31,6 @@ using namespace std;
  * ошибок без печати сообщений. Если в процессе разбора была найдена хотя бы
  * одна ошибка, код для виртуальной машины не печатается.*/
 
-enum VAR_TYPES: char
-{
-  INTEGER = 'i',
-  ADDRESS = 'a',
-};
-
-typedef struct {
-  int addr;
-  enum VAR_TYPES type;
-} VarValue;
-
 class Parser 
 {
 public:
@@ -67,7 +56,30 @@ public:
 	void parse();	//проводим синтаксический разбор 
 
 private:
+
+  enum VAR_TYPES: char
+  {
+    INTEGER = 'i',
+    ADDRESS = 'a',
+  };
+
+  typedef struct {
+    int addr;
+    enum VAR_TYPES type;
+  } VarValue;
+
 	typedef map<string, VarValue> VarTable;
+
+  typedef struct {
+    int addr;
+    int return_point;
+    int lastVar;
+    int n_params;
+    VarTable variables;
+  } FunctionInfo;
+
+	typedef map<string, FunctionInfo> FuncTable;
+
 	//описание блоков.
 	void program(); //Разбор программы. BEGIN statementList END
 	void statementList(); // Разбор списка операторов.
@@ -77,6 +89,8 @@ private:
 	void factor(); //разбор множителя.
 	void relation(); //разбор условия.
 	void functions(); // Разбор списка функций.
+	int parameters(); // Разбор списка параметров.
+	int arguments(); // Разбор списка аргументов.
 
 	// Сравнение текущей лексемы с образцом. Текущая позиция в потоке лексем не изменяется.
 	bool see(Token t)
@@ -119,7 +133,12 @@ private:
 	int findOrAddVariable(const string&); //функция пробегает по variables_. 
 	//Если находит нужную переменную - возвращает ее номер, иначе добавляет ее в массив, увеличивает lastVar и возвращает его.
 	int findVariable(const string&); //функция пробегает по variables_. 
-	//Если находит нужную переменную - возвращает ее номер, иначе - ошибка.
+  int addFunction(const string& fn_name,
+    const int addr, const int n_params, 
+    const int lastVar, const VarTable variables);
+
+	int findFunciton(const string&); //функция пробегает по functions_. 
+	//Если находит нужную функцию - возвращает ее номер, иначе - ошибка.
 
 	Scanner* scanner_; //лексический анализатор для конструктора
 	CodeGen* codegen_; //указатель на виртуальную машину
@@ -129,6 +148,8 @@ private:
 	VarTable variables_; //массив переменных, найденных в программе
 	int lastVar_; //номер последней записанной переменной
   enum VAR_TYPES lastExpressionType_;
+  FuncTable functions_;
+  bool in_function;
 };
 
 #endif
