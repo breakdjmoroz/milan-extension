@@ -35,6 +35,7 @@ opcode_info opcodes_table[] = {
         {"PRINT",    0},
         {"SLOAD",    1},
         {"SSTORE",   1},
+        {"SJUMP",    0},
 };
 
 int opcodes_table_size = sizeof(opcodes_table) / sizeof(opcode_info);
@@ -369,6 +370,17 @@ int vm_run_command()
 					int data = vm_pop();
 					vm_sstore(arg, data);
 					break;
+
+        case SJUMP:
+					if(arg < MAX_PROGRAM_SIZE) {
+							vm_command_pointer = vm_pop();
+							return 1;
+					}
+					else {
+									vm_error(BAD_CODE_ADDRESS);
+					}
+					break;
+
 
         default:
 		vm_error(UNKNOWN_COMMAND);

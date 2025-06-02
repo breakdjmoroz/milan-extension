@@ -91,6 +91,10 @@ void Command::print(int address, ostream& os)
 		case SSTORE:
 			os << "SSTORE\t" << arg_;
 			break;
+
+		case SJUMP:
+			os << "SJUMP";
+			break;
 	}
 
 	os << endl;

@@ -72,7 +72,6 @@ private:
 
   typedef struct {
     int addr;
-    int return_point;
     int lastVar;
     int n_params;
     VarTable variables;

@@ -38,6 +38,7 @@ typedef enum {
         PRINT,           /* Запись слова на стандартное устройство вывода */
 				SLOAD,
 				SSTORE,
+				SJUMP,
 } operation;
 
 /* Операции сравнения */
