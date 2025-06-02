@@ -33,6 +33,7 @@ static const char * tokenNames_[] = {
   "'['",
   "']'",
   "'FUNCTION'",
+  "','",
 };
 
 void Scanner::nextToken()
@@ -239,6 +240,11 @@ void Scanner::nextToken()
 			// скобку
 			case ']':
 				token_ = T_RSPAREN;
+				nextChar();
+				break;
+
+			case ',':
+				token_ = T_COMMA;
 				nextChar();
 				break;
 

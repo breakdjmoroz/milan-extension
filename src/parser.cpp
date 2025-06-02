@@ -96,14 +96,28 @@ void Parser::statement()
         // лежащее в участке памяти,
         // отведённом под временное хранеине
         // значения выражения
-        codegen_->emit(LOAD, lastVar_ + 1);
+        if (in_function)
+        {
+          codegen_->emit(SLOAD, lastVar_ + 1);
+        }
+        else
+        {
+          codegen_->emit(LOAD, lastVar_ + 1);
+        }
         expression();
 
         mustBe(T_RSPAREN);
 
         // Сохраняем вычисленный индекс во
         // временную память
-        codegen_->emit(STORE, lastVar_ + 1);
+        if (in_function)
+        {
+          codegen_->emit(SSTORE, lastVar_ + 1);
+        }
+        else
+        {
+          codegen_->emit(STORE, lastVar_ + 1);
+        }
 
         if (lastExpressionType_ != INTEGER)
         {
@@ -120,13 +134,28 @@ void Parser::statement()
         // кладём туда значение выражения.
 
         codegen_->emit(PUSH, varAddress);
-        codegen_->emit(LOAD, lastVar_ + 1);
-        codegen_->emit(ADD);
-        codegen_->emit(BSTORE, 0);
+
+        if (in_function)
+        {
+          codegen_->emit(SLOAD, lastVar_ + 1);
+          codegen_->emit(ADD);
+          // TODO: SBSTORE
+
+          // Восстанавливаем значение во
+          // временной ячейке памяти
+          codegen_->emit(SSTORE, lastVar_ + 1);
+        }
+        else
+        {
+          codegen_->emit(LOAD, lastVar_ + 1);
+          codegen_->emit(ADD);
+          codegen_->emit(BSTORE, 0);
+
+          // Восстанавливаем значение во
+          // временной ячейке памяти
+          codegen_->emit(STORE, lastVar_ + 1);
+        }
         
-        // Восстанавливаем значение во
-        // временной ячейке памяти
-        codegen_->emit(STORE, lastVar_ + 1);
       }
     }
     else
@@ -147,7 +176,14 @@ void Parser::statement()
         reportError("mismatch expression and variable types.");
       }
 
-      codegen_->emit(STORE, varAddress);
+      if (in_function)
+      {
+        codegen_->emit(SSTORE, varAddress);
+      }
+      else
+      {
+        codegen_->emit(STORE, varAddress);
+      }
     }
 	}
 	// Если встретили IF, то затем должно следовать условие. На вершине стека лежит 1 или 0 в зависимости от выполнения условия.
@@ -226,8 +262,16 @@ void Parser::statement()
           // Нужно загрузить значение переменной
           // адресного типа, а затем по этому
           // значению положить значение в память
-          codegen_->emit(LOAD, varAddress);
-          codegen_->emit(BSTORE, 0);
+          if (in_function)
+          {
+            codegen_->emit(SLOAD, varAddress);
+            // TODO: SBSTORE
+          }
+          else
+          {
+            codegen_->emit(LOAD, varAddress);
+            codegen_->emit(BSTORE, 0);
+          }
         }
         else
         {
@@ -246,7 +290,14 @@ void Parser::statement()
       // Используем свободную память, чтобы
       // сохранить значение выражения. Перед
       // этим сохраняем её значение
-      codegen_->emit(LOAD, lastVar_ + 1);
+      if (in_function)
+      {
+        codegen_->emit(SLOAD, lastVar_ + 1);
+      }
+      else
+      {
+        codegen_->emit(LOAD, lastVar_ + 1);
+      }
 
       mustBe(T_LPAREN);
       expression();
@@ -256,7 +307,14 @@ void Parser::statement()
       // выдающего адресс, по которому
       // положим значение следующего за
       // присваиванием выражения
-      codegen_->emit(STORE, lastVar_ + 1);
+      if (in_function)
+      {
+        codegen_->emit(SSTORE, lastVar_ + 1);
+      }
+      else
+      {
+        codegen_->emit(STORE, lastVar_ + 1);
+      }
 
       if (lastExpressionType_ != ADDRESS)
       {
@@ -271,13 +329,23 @@ void Parser::statement()
         {
           // Загружаем из памяти адресс,
           // по которому положим значение
-          codegen_->emit(LOAD, lastVar_ + 1);
-          codegen_->emit(BSTORE, 0);
+          if (in_function)
+          {
+            codegen_->emit(SLOAD, lastVar_ + 1);
+            // TODO: SBSTORE
 
-          // Освобождаем занятую под значение
-          // выражения память. Загружаем
-          // запомненное в начале значение
-          codegen_->emit(STORE, lastVar_ + 1);
+            codegen_->emit(SSTORE, lastVar_ + 1);
+          }
+          else
+          {
+            codegen_->emit(LOAD, lastVar_ + 1);
+            codegen_->emit(BSTORE, 0);
+
+            // Освобождаем занятую под значение
+            // выражения память. Загружаем
+            // запомненное в начале значение
+            codegen_->emit(STORE, lastVar_ + 1);
+          }
         }
         else
         {
@@ -352,7 +420,7 @@ void Parser::factor()
 		Множитель описывается следующими правилами:
 		<factor> -> number | &identifier | *identifier |
    *(<expression>) | identifier | -<factor> |
-   (<expression>) | READ
+   (<expression>) | READ | identifier(<parameters>)
 	*/
 	if(see(T_NUMBER)) {
 		int value = scanner_->getIntValue();
@@ -391,8 +459,17 @@ void Parser::factor()
       if (varAddress >= 0 &&
           variables_[varName].type == ADDRESS) {
         lastExpressionType_ = INTEGER;
-        codegen_->emit(LOAD, varAddress);
-        codegen_->emit(BLOAD, 0);
+
+        if (in_function)
+        {
+          codegen_->emit(SLOAD, varAddress);
+          // TODO: SBLOAD
+        }
+        else
+        {
+          codegen_->emit(LOAD, varAddress);
+          codegen_->emit(BLOAD, 0);
+        }
       }
       else
       {
@@ -412,7 +489,15 @@ void Parser::factor()
       // целочисленным. Иначе - ошибка.
       if (lastExpressionType_ == ADDRESS) {
         lastExpressionType_ = INTEGER;
-        codegen_->emit(BLOAD, 0);
+
+        if (in_function)
+        {
+          //TODO: SBLOAD
+        }
+        else
+        {
+          codegen_->emit(BLOAD, 0);
+        }
       }
       else
       {
@@ -429,6 +514,8 @@ void Parser::factor()
 	else if(see(T_IDENTIFIER)) {
     string varName = scanner_->getStringValue();
 		int varAddress = findVariable(varName);
+    int fn_address = findFunciton(varName);
+    bool is_function = false;
 		next();
 
     if (varAddress >= 0)
@@ -453,7 +540,19 @@ void Parser::factor()
         mustBe(T_RSPAREN);
 
         // Загружаем значение из памяти
-        codegen_->emit(BLOAD, varAddress);
+        if (in_function)
+        {
+          // TODO: SBLOAD / SBSTORE
+        }
+        else
+        {
+          codegen_->emit(BLOAD, varAddress);
+        }
+      }
+      else if (see(T_LPAREN))
+      {
+        mustBe(T_LPAREN);
+        is_function = true;
       }
       else
       {
@@ -462,13 +561,55 @@ void Parser::factor()
           lastExpressionType_ = ADDRESS;
         }
 
-        codegen_->emit(LOAD, varAddress);
+        if (in_function)
+        {
+          codegen_->emit(SLOAD, varAddress);
+        }
+        else
+        {
+          codegen_->emit(LOAD, varAddress);
+        }
       }
     }
-    else
+
+    if (fn_address >= 0)
     {
-      reportError("only defined variable can be"
-          "used in expression.");
+      if (see(T_LPAREN) || is_function)
+      {
+        if (!is_function)
+        {
+          mustBe(T_LPAREN);
+        }
+
+        codegen_->emit(PUSH, 0);
+        int n_args = arguments();
+
+        if (n_args == functions_[varName].n_params)
+        {
+          mustBe(T_RPAREN);
+
+          for (int i = n_args; i >= 0; --i)
+          {
+            codegen_->emit(SLOAD, -n_args + i);
+          }
+          codegen_->emit(JUMP, functions_[varName].addr);
+        }
+        else
+        {
+          reportError("number of arguments is incorrect.");
+        }
+      }
+      else
+      {
+        reportError("you should call a function"
+            " using '(' and ')'.");
+      }
+    }
+
+    if (fn_address < 0 && varAddress < 0)
+    {
+      reportError("only defined variable or function"
+          " can be used in expression.");
     }
 		//Если встретили переменную, то выгружаем значение, лежащее по ее адресу, на вершину стека 
 	}
@@ -534,18 +675,88 @@ void Parser::relation()
 	}
 }
 
+int Parser::arguments()
+{
+  int count = 0;
+
+  if (!see(T_RPAREN))
+  {
+    expression();
+    ++count;
+  }
+
+  while (!see(T_RPAREN))
+  {
+    mustBe(T_COMMA);
+    expression();
+    ++count;
+  }
+
+  return count;
+}
+
+int Parser::parameters()
+{
+  int count = 0;
+
+  if (see(T_IDENTIFIER))
+  {
+    mustBe(T_IDENTIFIER);
+    findOrAddVariable(scanner_->getStringValue());
+    ++count;
+  }
+
+  while(!see(T_RPAREN))
+  {
+    mustBe(T_COMMA);
+    mustBe(T_IDENTIFIER);
+    findOrAddVariable(scanner_->getStringValue());
+    ++count;
+  }
+
+  return count;
+}
+
 void Parser::functions()
 {
+  in_function = true;
+
   while (see(T_FUNCTION))
   {
-
     mustBe(T_FUNCTION);
     mustBe(T_IDENTIFIER);
+
+    string fn_name = scanner_->getStringValue();
+    VarTable variables;
+    int lastVar = 0;
+
+    VarTable variables_global = variables_;
+    int lastVar_global = lastVar_;
+
+    variables_ = variables;
+    lastVar_ = lastVar;
+
+    mustBe(T_LPAREN);
+    int n_params = parameters();
+    mustBe(T_RPAREN);
+
+    int addr = codegen_->getCurrentAddress();
+
     mustBe(T_BEGIN);
     statementList();
     mustBe(T_END);
+
+    variables = variables_;
+    lastVar = lastVar_;
+
+    addFunction(fn_name, addr, n_params,
+        lastVar, variables);
+
+    variables_ = variables_global;
+    lastVar_ = lastVar_global;
   }
 
+  in_function = false;
 }
 
 int Parser::findOrAddVariable(const string& var)
@@ -553,6 +764,7 @@ int Parser::findOrAddVariable(const string& var)
 	VarTable::iterator it = variables_.find(var);
 	if(it == variables_.end()) {
 		variables_[var].addr = lastVar_;
+		variables_[var].type = INTEGER;
 		return lastVar_++;
 	}
 	else {
@@ -565,6 +777,36 @@ int Parser::findVariable(const string& var)
   VarTable::iterator it = variables_.find(var);
 
 	if(it != variables_.end()) {
+    return it->second.addr;
+	}
+  else {
+    /* TODO: remove magic numbers */
+    return -1;
+  }
+}
+
+int Parser::addFunction(const string& fn_name,
+    const int addr, const int n_params, 
+    const int lastVar, const VarTable variables)
+{
+	FuncTable::iterator it = functions_.find(fn_name);
+	if(it == functions_.end()) {
+		functions_[fn_name].addr = addr;
+		functions_[fn_name].n_params = n_params;
+		functions_[fn_name].lastVar = lastVar;
+		functions_[fn_name].variables = variables;
+		return functions_[fn_name].addr;
+	}
+	else {
+		return -1;
+	}
+}
+
+int Parser::findFunciton(const string& func)
+{
+  FuncTable::iterator it = functions_.find(func);
+
+	if(it != functions_.end()) {
     return it->second.addr;
 	}
   else {
