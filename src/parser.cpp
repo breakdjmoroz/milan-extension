@@ -704,15 +704,42 @@ int Parser::parameters()
   if (see(T_IDENTIFIER))
   {
     mustBe(T_IDENTIFIER);
-    findOrAddVariable(scanner_->getStringValue());
+
+    string varName = scanner_->getStringValue();
+    findOrAddVariable(varName);
+    variables_[varName].type = INTEGER;
+
+    ++count;
+  }
+  else if (see(T_REF))
+  {
+    mustBe(T_REF);
+    mustBe(T_IDENTIFIER);
+
+    string varName = scanner_->getStringValue();
+    findOrAddVariable(varName);
+    variables_[varName].type = ADDRESS;
+
     ++count;
   }
 
   while(!see(T_RPAREN))
   {
+    bool is_reference = false;
     mustBe(T_COMMA);
+
+    if (see(T_REF))
+    {
+      next();
+      is_reference = true;
+    }
     mustBe(T_IDENTIFIER);
-    findOrAddVariable(scanner_->getStringValue());
+
+    string varName = scanner_->getStringValue();
+    findOrAddVariable(varName);
+    variables_[varName].type =
+      (is_reference)? ADDRESS : INTEGER;
+
     ++count;
   }
 
@@ -772,7 +799,6 @@ int Parser::findOrAddVariable(const string& var)
 	VarTable::iterator it = variables_.find(var);
 	if(it == variables_.end()) {
 		variables_[var].addr = lastVar_;
-		variables_[var].type = INTEGER;
 		return lastVar_++;
 	}
 	else {
