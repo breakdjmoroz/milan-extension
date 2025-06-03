@@ -43,7 +43,9 @@ void Parser::statementList()
 	//	  В этом случае результатом разбора будет пустой блок (его список операторов равен null).
 	//	  Если очередная лексема не входит в этот список, то ее мы считаем началом оператора и вызываем метод statement. 
 	//    Признаком последнего оператора является отсутствие после оператора точки с запятой.
-	if(see(T_END) || see(T_OD) || see(T_ELSE) || see(T_FI)) {
+	if(see(T_END) || see(T_OD) ||
+      see(T_ELSE) || see(T_FI) ||
+      see(T_RETURN)) {
 		return;
 	}
 	else {
@@ -883,20 +885,63 @@ void Parser::functions()
 
     mustBe(T_BEGIN);
     statementList();
-    mustBe(T_END);
+
+    bool is_returns = false;
+    if (see(T_RETURN))
+    {
+      mustBe(T_RETURN);
+      is_returns = true;
+
+      // Вычисляем
+      // выражение, которое хотим
+      // вернуть
+      expression();
+
+      // Помещаем его в стек
+      // над адресом возврата
+      // и увеличиваем количество
+      // элементов на стеке (чтобы
+      // не удалить наше значение)
+      codegen_->emit(SSTORE, 0);
+      codegen_->emit(PUSH, 0);
+    }
 
     lastParamsTypes_.clear();
     variables = variables_;
     lastVar = lastVar_;
 
-    addFunction(fn_name, addr,
-        params_types, lastVar, variables);
-
     for (int i = 0; i < lastVar; ++i)
     {
       codegen_->emit(POP);
     }
+
+    if (is_returns)
+    {
+      // Меняем местами возвращаемое значение
+      // и адрес возврата. Для этого
+      // Сохраняем возвращаемое значение
+      codegen_->emit(SSTORE, 1);
+
+      // Резервируем место под адресом
+      // возврата
+      codegen_->emit(DUP);
+
+      // Восстанавливаем сохранённое значение
+      codegen_->emit(SLOAD, 1);
+
+      // Кладём его на зарезервированное
+      // место
+      codegen_->emit(SSTORE, -1);
+    }
+
+    // Вытаскиваем из стека адрес
+    // возврата и переходим по нему
     codegen_->emit(SJUMP);
+
+    mustBe(T_END);
+
+    addFunction(fn_name, addr,
+        params_types, lastVar, variables);
 
     variables_ = variables_global;
     lastVar_ = lastVar_global;

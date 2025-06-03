@@ -34,6 +34,7 @@ static const char * tokenNames_[] = {
   "']'",
   "'FUNCTION'",
   "','",
+  "'RETURN'",
 };
 
 void Scanner::nextToken()
