@@ -1,4 +1,4 @@
-.PHONY: all clean run compile link build
+.PHONY: all clean run compile link build install
 
 PROGRAM=my_milan.bin
 
@@ -58,6 +58,11 @@ endif
 run:
 	./$(BUILD_DIR)/$(PROGRAM) $(SOURCE_MILAN) > $(OBJECT_MILAN)
 	$(VM) $(OBJECT_MILAN)
+
+install:
+	mkdir -p bin vm/bin
+	make -C vm
+	make
 
 clean:
 	rm -rd $(BUILD_DIR)/*
