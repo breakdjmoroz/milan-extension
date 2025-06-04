@@ -675,6 +675,12 @@ void Parser::factor()
 
     if (fn_address >= 0)
     {
+      if (!functions_[varName].is_returns)
+      {
+        reportError("noreturn functions can't be"
+            " used in expressions.");
+      }
+
       if (see(T_LPAREN) || is_function)
       {
         if (!is_function)
@@ -940,7 +946,7 @@ void Parser::functions()
 
     mustBe(T_END);
 
-    addFunction(fn_name, addr,
+    addFunction(fn_name, addr, is_returns,
         params_types, lastVar, variables);
 
     variables_ = variables_global;
@@ -976,7 +982,8 @@ int Parser::findVariable(const string& var)
 }
 
 int Parser::addFunction(const string& fn_name,
-    const int addr, const vector<Parameter> params_types,
+    const int addr, const bool is_returns,
+    const vector<Parameter> params_types,
     const int lastVar, const VarTable variables)
 {
 	FuncTable::iterator it = functions_.find(fn_name);
@@ -985,6 +992,7 @@ int Parser::addFunction(const string& fn_name,
 		functions_[fn_name].params_types = params_types;
 		functions_[fn_name].lastVar = lastVar;
 		functions_[fn_name].variables = variables;
+		functions_[fn_name].is_returns = is_returns;
 		return functions_[fn_name].addr;
 	}
 	else {

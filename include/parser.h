@@ -79,6 +79,7 @@ private:
   typedef struct {
     int addr;
     int lastVar;
+    bool is_returns;
     vector<Parameter> params_types;
     VarTable variables;
   } FunctionInfo;
@@ -139,7 +140,8 @@ private:
 	//Если находит нужную переменную - возвращает ее номер, иначе добавляет ее в массив, увеличивает lastVar и возвращает его.
 	int findVariable(const string&); //функция пробегает по variables_. 
   int addFunction(const string& fn_name,
-    const int addr, const vector<Parameter> params_types,
+    const int addr, const bool is_returns,
+    const vector<Parameter> params_types,
     const int lastVar, const VarTable variables);
 
 	int findFunciton(const string&); //функция пробегает по functions_. 
