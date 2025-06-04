@@ -1,6 +1,6 @@
 .DELETE_ON_ERROR:
 bin/mvm:	vm.c lex.yy.c vmparse.tab.h main.c
-	gcc -o $@ main.c vm.c lex.yy.c vmparse.tab.c
+	gcc -g -o $@ main.c vm.c lex.yy.c vmparse.tab.c
 
 lex.yy.c:	vmlex.l
 	flex vmlex.l
