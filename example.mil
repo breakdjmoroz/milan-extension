@@ -1,0 +1,77 @@
+FUNCTION sum(a, b)
+BEGIN
+  RETURN a + b
+END
+
+FUNCTION mul(a, b)
+BEGIN
+  RETURN a * b
+END
+
+FUNCTION inc(&num)
+BEGIN
+  *num := *num + 1
+END
+
+FUNCTION ninc(&nums, n)
+BEGIN
+  i := 0;
+  WHILE i < n DO
+    nums[i] := nums[i] + 1;
+    i := i + 1
+  OD
+END
+
+FUNCTION nmul(&nums, n, factor)
+BEGIN
+  i := 0;
+  WHILE i < n DO
+    nums[i] := nums[i] * factor;
+    i := i + 1
+  OD
+END
+
+FUNCTION nprint(&array, n)
+BEGIN
+  i := 0;
+
+  WHILE i < n DO
+    WRITE(array[i]);
+    i := i + 1
+  OD
+
+END
+
+BEGIN
+
+  i := 0;
+  n := READ;
+
+  array[10];
+  arrayptr := &array;
+
+  WHILE i < n DO
+    WRITE(i);
+    array[i] := i * 2;
+    i := i + 1
+  OD;
+
+  WRITE(-100000001);
+  WRITE(*(arrayptr + 2));
+  WRITE(-100000001);
+
+  i := 0;
+
+  WHILE i < n DO
+    WRITE(array[i]);
+    i := i + 1
+  OD;
+
+  ninc(&array, n);
+  nmul(&array, n, 2);
+  nprint(&array, n);
+
+  z := sum(2, 4) + mul(2, 3);
+  WRITE(z)
+
+END
