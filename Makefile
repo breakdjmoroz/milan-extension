@@ -2,8 +2,8 @@
 
 PROGRAM=my_milan.bin
 
-SOURCE_MILAN=source.mil
-OBJECT_MILAN=test_out.mil
+SOURCE_MILAN=example.mil
+OBJECT_MILAN=$(patsubst %.mil,%,$(SOURCE_MILAN)).obj
 
 DEBUG=y
 
@@ -13,7 +13,7 @@ BUILD_DIR=bin
 VM=./vm/bin/mvm
 
 CC=g++
-CFLAGS=$(INCLUDES)
+CFLAGS=$(INCLUDES) -Wall
 ASFLAGS=$(INCLUDES)
 LDFLAGS=
 LIBS=
